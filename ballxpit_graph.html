@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BallXPit Evolution Graph</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica', 'Arial', sans-serif;
+            background: #fafafa;
+            color: #1a1a1a;
+            overflow: auto;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        h1 {
+            text-align: center;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            background: #fafafa;
+            padding: 10px 0;
+            z-index: 1000;
+            font-weight: 600;
+            font-size: 24px;
+            letter-spacing: -0.5px;
+        }
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 60px;
+            background: #fafafa;
+            padding: 10px 0;
+            z-index: 1000;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .search-box {
+            padding: 8px 15px;
+            border-radius: 4px;
+            border: 1px solid #d0d0d0;
+            background: #ffffff;
+            color: #1a1a1a;
+            font-size: 14px;
+            width: 250px;
+            outline: none;
+        }
+        .search-box:focus {
+            border-color: #666;
+        }
+        .clear-btn {
+            padding: 8px 20px;
+            border-radius: 4px;
+            border: 1px solid #d0d0d0;
+            background: #ffffff;
+            color: #1a1a1a;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 10px;
+            outline: none;
+        }
+        .clear-btn:hover {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+        .clear-btn:active {
+            transform: scale(0.98);
+        }
+        .graph-container {
+            position: relative;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .tier-row {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+        }
+        .tier-header {
+            font-weight: 600;
+            font-size: 16px;
+            color: #666;
+            text-align: center;
+            padding: 8px 20px;
+            background: #ffffff;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            width: fit-content;
+            margin: 0 auto;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 12px;
+        }
+        .balls-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            padding: 0 20px;
+        }
+        .ball-node {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 120px;
+            z-index: 10;
+        }
+        .ball-node:hover {
+            border-color: #999;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+        .ball-node.base-ball {
+            background: #ffffff;
+            border-color: #d0d0d0;
+        }
+        .ball-node.tier1-ball {
+            background: #fafafa;
+            border-color: #d0d0d0;
+        }
+        .ball-node.tier2-ball {
+            background: #f5f5f5;
+            border-color: #c0c0c0;
+        }
+        .ball-node.tier3-ball {
+            background: #f0f0f0;
+            border-color: #b0b0b0;
+        }
+        .ball-node.highlight {
+            border-color: #666;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+            z-index: 101;
+        }
+        .ball-node.selected {
+            border-color: #1a1a1a;
+            box-shadow: 0 3px 16px rgba(0,0,0,0.2);
+            transform: translateY(-3px);
+            z-index: 102;
+        }
+        .ball-node.dimmed {
+            opacity: 0.3;
+        }
+        .ball-icon {
+            object-fit: contain;
+            border-radius: 50%;
+            background: #f5f5f5;
+            padding: 2px;
+            flex-shrink: 0;
+        }
+        .ball-name {
+            color: #1a1a1a;
+            font-weight: 500;
+            font-size: 13px;
+            text-align: center;
+            line-height: 1.2;
+        }
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: visible;
+        }
+        .connection-line {
+            stroke: #d0d0d0;
+            stroke-width: 1.5;
+            fill: none;
+            opacity: 0.1;
+            transition: all 0.3s;
+        }
+        .connection-line.recipe-0 {
+            stroke: #666;
+        }
+        .connection-line.recipe-1 {
+            stroke: #999;
+            stroke-dasharray: 5, 5;
+        }
+        .connection-line.recipe-2 {
+            stroke: #aaa;
+            stroke-dasharray: 2, 4;
+        }
+        .connection-line.highlight {
+            stroke-width: 2;
+            opacity: 1;
+        }
+        .tooltip {
+            position: fixed;
+            background: #ffffff;
+            color: #1a1a1a;
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid #d0d0d0;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 2000;
+            display: none;
+            max-width: 300px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+        .legend-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            border: 1px solid;
+        }
+    </style>
+</head>
+<body>
+    <h1>BallXPit Evolution Graph</h1>
+    
+    <div class="controls">
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-box" style="background: #ffffff; border-color: #d0d0d0;"></div>
+                <span>Base</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #fafafa; border-color: #d0d0d0;"></div>
+                <span>Tier 1</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #f5f5f5; border-color: #c0c0c0;"></div>
+                <span>Tier 2</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #f0f0f0; border-color: #b0b0b0;"></div>
+                <span>Tier 3</span>
+            </div>
+        </div>
+        <input type="text" class="search-box" id="searchInput" placeholder="Search balls..." onkeyup="searchBalls()">
+        <button class="clear-btn" onclick="clearSelection()">Clear Selection</button>
+        <div style="margin-top: 10px; font-size: 12px; color: #666;">
+            Hover to preview • Click to select multiple • Click ball again to deselect • Click background to clear all
+        </div>
+    </div>
+
+    <div class="graph-container" id="graphContainer"></div>
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        function getImageUrl(ballName) {
+            // Special handling for Laser balls
+            if (ballName === 'Laser (Horizontal)') {
+                return 'https://ballxpit.wiki.gg/images/thumb/Laser_%28Horizontal%29.png/100px-Laser_%28Horizontal%29.png';
+            }
+            if (ballName === 'Laser (Vertical)') {
+                return 'https://ballxpit.wiki.gg/images/thumb/Laser_%28Vertical%29.png/100px-Laser_%28Vertical%29.png';
+            }
+            
+            const imageName = ballName.replace(/ /g, '_').replace(/\(|\)/g, '');
+            return `https://ballxpit.wiki.gg/images/thumb/${imageName}.png/100px-${imageName}.png`;
+        }
+
+        const ballsData = {
+            "Iron": { type: "base", creates: ["Assassin", "Bomb", "Hemorrhage", "Lightning Rod", "Shotgun", "Steel"] },
+            "Ghost": { type: "base", creates: ["Assassin", "Phantom", "Soul Sucker", "Virus", "Wraith"] },
+            "Dark": { type: "base", creates: ["Assassin", "Banished Flame", "Black Hole", "Flicker", "Incubus", "Noxious", "Phantom", "Sacrifice", "Vampire Lord"] },
+            "Burn": { type: "base", creates: ["Banished Flame", "Berserk", "Brimstone", "Bomb", "Fireworks", "Frozen Flame", "Inferno", "Magma", "Sun"] },
+            "Charm": { type: "base", creates: ["Berserk", "Incubus", "Lovestruck", "Succubus"] },
+            "Bleed": { type: "base", creates: ["Berserk", "Hemorrhage", "Leech", "Sacrifice", "Vampire Lord"] },
+            "Freeze": { type: "base", creates: ["Blizzard", "Freeze Ray", "Frozen Flame", "Glacier", "Wraith"] },
+            "Wind": { type: "base", creates: ["Blizzard", "Inferno", "Noxious", "Sandstorm", "Storm"] },
+            "Lightning": { type: "base", creates: ["Blizzard", "Flash", "Lightning Rod", "Lovestruck", "Storm"] },
+            "Stone": { type: "base", creates: ["Brimstone", "Catapult", "Glacier", "Landslide", "Sandstorm", "Steel"] },
+            "Poison": { type: "base", creates: ["Brimstone", "Noxious", "Nuclear Bomb", "Radiation Beam", "Swamp", "Virus"] },
+            "Egg Sac": { type: "base", creates: ["Catapult", "Fireworks", "Mosquito Swarm", "Shotgun", "Spider Queen", "Voluptuous Egg Sac"] },
+            "Light": { type: "base", creates: ["Flash", "Flicker", "Laser Beam", "Lovestruck", "Sun"] },
+            "Laser (Horizontal)": { type: "base", creates: ["Freeze Ray", "Holy Laser", "Laser Beam", "Laser Cutter", "Radiation Beam"] },
+            "Laser (Vertical)": { type: "base", creates: ["Freeze Ray", "Holy Laser", "Laser Beam", "Laser Cutter", "Radiation Beam"] },
+            "Earthquake": { type: "base", creates: ["Glacier", "Landslide", "Magma", "Overgrowth", "Sandstorm", "Swamp"] },
+            "Cell": { type: "base", creates: ["Maggot", "Overgrowth", "Radiation Beam", "Virus", "Voluptuous Egg Sac"] },
+            "Brood Mother": { type: "base", creates: ["Leech", "Maggot", "Mosquito King", "Spider Queen"] },
+            "Vampire": { type: "base", creates: ["Mosquito King", "Mosquito Swarm", "Soul Sucker", "Succubus", "Vampire Lord"] },
+            
+            "Assassin": { type: "tier1", recipes: [["Iron", "Ghost"], ["Iron", "Dark"]], description: "Backstabs deal 30% bonus damage." },
+            "Banished Flame": { type: "tier1", recipes: [["Dark", "Burn"]], description: "Darkflame deals 1-30 damage per stack per second." },
+            "Berserk": { type: "tier1", recipes: [["Charm", "Bleed"], ["Charm", "Burn"]], description: "30% chance to go berserk for 6 seconds." },
+            "Blizzard": { type: "tier1", recipes: [["Freeze", "Wind"], ["Freeze", "Lightning"]], description: "Freezes all enemies in 2 tile radius." },
+            "Bomb": { type: "tier1", recipes: [["Burn", "Iron"]], description: "Explodes dealing 150-300 damage.", creates: ["Nuclear Bomb"] },
+            "Brimstone": { type: "tier1", recipes: [["Stone", "Burn"], ["Poison", "Burn"]], description: "Applies burn and poison in 2 tile radius." },
+            "Catapult": { type: "tier1", recipes: [["Stone", "Egg Sac"]], description: "Launches 3-5 stone baby balls." },
+            "Fireworks": { type: "tier1", recipes: [["Burn", "Egg Sac"]], description: "Explodes into 3-6 fireworks." },
+            "Flash": { type: "tier1", recipes: [["Lightning", "Light"]], description: "Damages and blinds all enemies on screen." },
+            "Flicker": { type: "tier1", recipes: [["Light", "Dark"]], description: "Deals 1-7 damage to every enemy every 1.4s." },
+            "Freeze Ray": { type: "tier1", recipes: [["Freeze", "Laser (Horizontal)"], ["Freeze", "Laser (Vertical)"]], description: "Emits freeze ray dealing 20-50 damage." },
+            "Frozen Flame": { type: "tier1", recipes: [["Burn", "Freeze"]], description: "Frostburn: 8-12 damage/stack, +25% damage taken." },
+            "Glacier": { type: "tier1", recipes: [["Freeze", "Earthquake"], ["Freeze", "Stone"]], description: "Releases glacial spikes that freeze." },
+            "Hemorrhage": { type: "tier1", recipes: [["Bleed", "Iron"]], description: "At 12 stacks, deals 20% current health." },
+            "Holy Laser": { type: "tier1", recipes: [["Laser (Horizontal)", "Laser (Vertical)"]], description: "Deals 24-36 damage in row and column." },
+            "Incubus": { type: "tier1", recipes: [["Charm", "Dark"]], description: "Charmed enemies curse nearby enemies.", creates: ["Satan"] },
+            "Inferno": { type: "tier1", recipes: [["Burn", "Wind"]], description: "Applies 1 burn stack/second in 2 tile radius." },
+            "Landslide": { type: "tier1", recipes: [["Stone", "Earthquake"]], description: "Lasts 5 seconds, deals 20-30 damage/second." },
+            "Laser Beam": { type: "tier1", recipes: [["Light", "Laser (Horizontal)"], ["Light", "Laser (Vertical)"]], description: "Laser beam deals 30-42 damage, blinds 8s." },
+            "Leech": { type: "tier1", recipes: [["Brood Mother", "Bleed"]], description: "Attaches leeches adding 2 bleed/second." },
+            "Lightning Rod": { type: "tier1", recipes: [["Lightning", "Iron"]], description: "Lightning strikes every 3.0 seconds." },
+            "Lovestruck": { type: "tier1", recipes: [["Charm", "Light"], ["Charm", "Lightning"]], description: "50% chance to heal 5 when attacked." },
+            "Maggot": { type: "tier1", recipes: [["Brood Mother", "Cell"]], description: "Infests enemies, explodes into 1-2 baby balls." },
+            "Magma": { type: "tier1", recipes: [["Burn", "Earthquake"]], description: "Emits lava blobs dealing 15-30 damage." },
+            "Mosquito King": { type: "tier1", recipes: [["Vampire", "Brood Mother"]], description: "Spawns mosquito dealing 80-120 damage.", creates: ["Nosferatu"] },
+            "Mosquito Swarm": { type: "tier1", recipes: [["Vampire", "Egg Sac"]], description: "Explodes into 3-6 mosquitos." },
+            "Noxious": { type: "tier1", recipes: [["Wind", "Poison"], ["Wind", "Dark"]], description: "Applies 3 poison stacks in 2 tile radius." },
+            "Overgrowth": { type: "tier1", recipes: [["Earthquake", "Cell"]], description: "At 3 stacks, 150-200 damage in 3x3 square." },
+            "Phantom": { type: "tier1", recipes: [["Dark", "Ghost"]], description: "Cursed enemies take 100-200 after 5 hits." },
+            "Radiation Beam": { type: "tier1", recipes: [["Laser (Horizontal)", "Poison"], ["Laser (Horizontal)", "Cell"], ["Laser (Vertical)", "Poison"], ["Laser (Vertical)", "Cell"]], description: "Applies radiation: +10% damage taken/stack." },
+            "Sacrifice": { type: "tier1", recipes: [["Bleed", "Dark"]], description: "Inflicts 4 bleed stacks and curse." },
+            "Sandstorm": { type: "tier1", recipes: [["Earthquake", "Wind"], ["Stone", "Wind"]], description: "Storm deals 10-20 damage/second, blinds." },
+            "Shotgun": { type: "tier1", recipes: [["Iron", "Egg Sac"]], description: "Shoots 3-7 iron baby balls after wall hit." },
+            "Soul Sucker": { type: "tier1", recipes: [["Vampire", "Ghost"]], description: "30% steal 1 health, -20% attack damage." },
+            "Spider Queen": { type: "tier1", recipes: [["Brood Mother", "Egg Sac"]], description: "25% chance to birth Egg Sac on hit.", creates: ["Nosferatu"] },
+            "Steel": { type: "tier1", recipes: [["Iron", "Stone"]], description: "Double damage, 50% slower, +10% per hit.", creates: ["Laser Cutter"] },
+            "Storm": { type: "tier1", recipes: [["Lightning", "Wind"]], description: "Lightning strikes nearby enemies every second." },
+            "Succubus": { type: "tier1", recipes: [["Charm", "Vampire"]], description: "4% charm chance, heals 1 on charmed hit.", creates: ["Satan"] },
+            "Sun": { type: "tier1", recipes: [["Burn", "Light"]], description: "Blinds all, adds 1 burn stack/second.", creates: ["Black Hole"] },
+            "Swamp": { type: "tier1", recipes: [["Poison", "Earthquake"]], description: "Tar blobs slow 50%, apply poison." },
+            "Vampire Lord": { type: "tier1", recipes: [["Vampire", "Bleed"], ["Vampire", "Dark"]], description: "At 10 bleed stacks, heals 1 and consumes.", creates: ["Nosferatu"] },
+            "Virus": { type: "tier1", recipes: [["Poison", "Ghost"], ["Poison", "Cell"]], description: "Disease: 3-6 damage/stack, 15% spread chance." },
+            "Voluptuous Egg Sac": { type: "tier1", recipes: [["Egg Sac", "Cell"]], description: "Explodes into 2-3 egg sacs on hit." },
+            "Wraith": { type: "tier1", recipes: [["Freeze", "Ghost"]], description: "Freezes any enemy it passes through." },
+            
+            "Black Hole": { type: "tier2", recipes: [["Dark", "Sun"]], description: "Instantly kills first non-boss, 7s cooldown." },
+            "Laser Cutter": { type: "tier2", recipes: [["Laser (Horizontal)", "Steel"], ["Laser (Vertical)", "Steel"]], description: "Constantly emits laser: 100-150 damage/second." },
+            "Nuclear Bomb": { type: "tier2", recipes: [["Bomb", "Poison"]], description: "300-500 damage, applies radiation to all." },
+            "Satan": { type: "tier2", recipes: [["Incubus", "Succubus"]], description: "Burns and berserks all enemies." },
+            
+            "Nosferatu": { type: "tier3", recipes: [["Vampire Lord", "Spider Queen", "Mosquito King"]], description: "Spawns vampire bat dealing 132-176 damage." }
+        };
+
+        // Build graph data
+        const nodes = {};
+        const connections = [];
+        const selectedBalls = new Set();
+
+        // Create nodes and track connections with recipe index
+        Object.entries(ballsData).forEach(([name, data]) => {
+            nodes[name] = { ...data, name, element: null, x: 0, y: 0 };
+            
+            if (data.recipes) {
+                data.recipes.forEach((recipe, recipeIndex) => {
+                    recipe.forEach(ingredient => {
+                        connections.push({ 
+                            from: ingredient, 
+                            to: name,
+                            recipeIndex: recipeIndex,
+                            totalRecipes: data.recipes.length
+                        });
+                    });
+                });
+            }
+        });
+
+        // Organize into tiers
+        const tiers = {
+            base: Object.entries(ballsData).filter(([_, d]) => d.type === 'base').map(([n]) => n),
+            tier1: Object.entries(ballsData).filter(([_, d]) => d.type === 'tier1').map(([n]) => n),
+            tier2: Object.entries(ballsData).filter(([_, d]) => d.type === 'tier2').map(([n]) => n),
+            tier3: Object.entries(ballsData).filter(([_, d]) => d.type === 'tier3').map(([n]) => n)
+        };
+
+        // Render graph
+        function renderGraph() {
+            const container = document.getElementById('graphContainer');
+            container.innerHTML = '';
+
+            const tierOrder = ['base', 'tier1', 'tier2', 'tier3'];
+            const tierLabels = { base: 'Base Balls', tier1: 'Tier 1 Evolved', tier2: 'Tier 2 Evolved', tier3: 'Tier 3 Evolved' };
+
+            tierOrder.forEach(tier => {
+                const row = document.createElement('div');
+                row.className = 'tier-row';
+                row.id = `tier-${tier}`;
+
+                const header = document.createElement('div');
+                header.className = 'tier-header';
+                header.textContent = tierLabels[tier];
+                row.appendChild(header);
+
+                const ballsContainer = document.createElement('div');
+                ballsContainer.className = 'balls-container';
+
+                tiers[tier].forEach(ballName => {
+                    const node = createBallNode(ballName, nodes[ballName]);
+                    ballsContainer.appendChild(node);
+                    nodes[ballName].element = node;
+                });
+
+                row.appendChild(ballsContainer);
+                container.appendChild(row);
+            });
+
+            // Wait for layout and images, then draw connections
+            requestAnimationFrame(() => {
+                // Wait for all images to load
+                const images = Array.from(container.querySelectorAll('img'));
+                Promise.all(images.map(img => {
+                    if (img.complete) return Promise.resolve();
+                    return new Promise(resolve => {
+                        img.onload = resolve;
+                        img.onerror = resolve; // Resolve even on error so we don't block
+                    });
+                })).then(() => {
+                    setTimeout(() => {
+                        // Force layout recalculation
+                        container.offsetHeight;
+                        drawConnections();
+                    }, 100);
+                });
+            });
+        }
+
+        function createBallNode(name, data) {
+            const node = document.createElement('div');
+            node.className = `ball-node ${data.type}-ball`;
+            node.id = `node-${name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            node.dataset.name = name;
+
+            const icon = document.createElement('img');
+            icon.className = 'ball-icon';
+            icon.src = getImageUrl(name);
+            icon.alt = name;
+            icon.onerror = function() { this.style.display = 'none'; };
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'ball-name';
+            nameSpan.textContent = name;
+
+            node.appendChild(icon);
+            node.appendChild(nameSpan);
+
+            // Click to select/deselect (allows multiple selections)
+            node.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (selectedBalls.has(name)) {
+                    // Remove from selection
+                    selectedBalls.delete(name);
+                } else {
+                    // Add to selection
+                    selectedBalls.add(name);
+                }
+                
+                // Redraw highlights for all selected balls
+                clearHighlights();
+                if (selectedBalls.size > 0) {
+                    selectedBalls.forEach(ballName => {
+                        highlightConnections(ballName, true);
+                    });
+                }
+            });
+
+            // Hover effects (only if nothing is selected)
+            node.addEventListener('mouseenter', () => {
+                if (selectedBalls.size === 0) {
+                    highlightConnections(name, false);
+                }
+            });
+            node.addEventListener('mouseleave', () => {
+                if (selectedBalls.size === 0) {
+                    clearHighlights();
+                }
+            });
+
+            // Tooltip - show for all balls, not just ones with descriptions
+            node.addEventListener('mousemove', (e) => showTooltip(e, name, data.description || ''));
+            node.addEventListener('mouseleave', hideTooltip);
+
+            return node;
+        }
+
+        function drawConnections() {
+            // Remove existing SVG if present
+            const existingSvg = document.getElementById('connectionSvg');
+            if (existingSvg) existingSvg.remove();
+
+            const container = document.getElementById('graphContainer');
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.id = 'connectionSvg';
+            
+            // Set SVG size to match container
+            const containerRect = container.getBoundingClientRect();
+            svg.style.width = container.scrollWidth + 'px';
+            svg.style.height = container.scrollHeight + 'px';
+            
+            container.prepend(svg);
+
+            connections.forEach(conn => {
+                const fromEl = nodes[conn.from]?.element;
+                const toEl = nodes[conn.to]?.element;
+
+                if (fromEl && toEl) {
+                    const fromRect = fromEl.getBoundingClientRect();
+                    const toRect = toEl.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+
+                    // Connect from bottom center of source to top center of destination
+                    const x1 = fromRect.left + fromRect.width / 2 - containerRect.left;
+                    const y1 = fromRect.bottom - containerRect.top;
+                    const x2 = toRect.left + toRect.width / 2 - containerRect.left;
+                    const y2 = toRect.top - containerRect.top;
+
+                    // Offset x position slightly for multiple recipes
+                    const xOffset = conn.totalRecipes > 1 ? (conn.recipeIndex - (conn.totalRecipes - 1) / 2) * 15 : 0;
+
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    const midY = (y1 + y2) / 2;
+                    const d = `M ${x1 + xOffset} ${y1} C ${x1 + xOffset} ${midY}, ${x2 + xOffset} ${midY}, ${x2 + xOffset} ${y2}`;
+                    
+                    path.setAttribute('d', d);
+                    path.setAttribute('class', `connection-line recipe-${conn.recipeIndex}`);
+                    path.dataset.from = conn.from;
+                    path.dataset.to = conn.to;
+                    path.dataset.recipeIndex = conn.recipeIndex;
+
+                    svg.appendChild(path);
+                }
+            });
+
+            // Add recipe badges for balls with multiple recipes
+            Object.entries(nodes).forEach(([name, node]) => {
+                if (node.recipes && node.recipes.length > 1 && node.element) {
+                    // Check if badge already exists
+                    if (!node.element.querySelector('.recipe-badge')) {
+                        const badge = document.createElement('div');
+                        badge.className = 'recipe-badge';
+                        badge.textContent = `${node.recipes.length} recipes`;
+                        badge.style.cssText = 'position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: bold; z-index: 10;';
+                        node.element.style.position = 'relative';
+                        node.element.appendChild(badge);
+                    }
+                }
+            });
+        }
+
+        function highlightConnections(ballName, isSelection = false) {
+            const highlightClass = isSelection ? 'selected' : 'highlight';
+            
+            // Build set of all balls to highlight (the selected ball + its connections)
+            const ballsToHighlight = new Set([ballName]);
+            
+            const svg = document.getElementById('connectionSvg');
+            if (svg) {
+                const lines = svg.querySelectorAll('.connection-line');
+                lines.forEach(line => {
+                    const from = line.dataset.from;
+                    const to = line.dataset.to;
+                    
+                    if (from === ballName || to === ballName) {
+                        line.classList.add('highlight');
+                        ballsToHighlight.add(from);
+                        ballsToHighlight.add(to);
+                    }
+                });
+            }
+            
+            // Apply highlighting
+            Object.values(nodes).forEach(n => {
+                if (ballsToHighlight.has(n.name) && n.element) {
+                    n.element.classList.remove('dimmed');
+                    n.element.classList.add(highlightClass);
+                } else if (n.element && !n.element.classList.contains('highlight') && !n.element.classList.contains('selected')) {
+                    n.element.classList.add('dimmed');
+                }
+            });
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('.ball-node').forEach(n => {
+                n.classList.remove('highlight', 'dimmed', 'selected');
+            });
+            document.querySelectorAll('.connection-line').forEach(l => {
+                l.classList.remove('highlight');
+            });
+        }
+
+        function showTooltip(e, name, description) {
+            const tooltip = document.getElementById('tooltip');
+            const node = nodes[name];
+            let content = `<strong>${name}</strong>`;
+            
+            if (description) {
+                content += `<br>${description}`;
+            }
+            
+            if (node.recipes && node.recipes.length > 0) {
+                content += '<br><br><strong>Recipes:</strong>';
+                node.recipes.forEach((recipe, idx) => {
+                    const recipeColor = idx === 0 ? '#9b59b6' : idx === 1 ? '#e74c3c' : '#f39c12';
+                    content += `<br><span style="color: ${recipeColor};">▸</span> ${recipe.join(' + ')}`;
+                });
+            }
+            
+            if (node.creates && node.creates.length > 0) {
+                content += '<br><br><strong>Used to create:</strong><br>';
+                content += node.creates.join(', ');
+            }
+            
+            tooltip.innerHTML = content;
+            tooltip.style.display = 'block';
+            tooltip.style.left = e.clientX + 10 + 'px';
+            tooltip.style.top = e.clientY + 10 + 'px';
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').style.display = 'none';
+        }
+
+        function searchBalls() {
+            const input = document.getElementById('searchInput').value.toLowerCase();
+            
+            // Clear selections when searching
+            selectedBalls.clear();
+            
+            if (!input) {
+                clearHighlights();
+                return;
+            }
+
+            clearHighlights();
+
+            Object.entries(nodes).forEach(([name, node]) => {
+                if (name.toLowerCase().includes(input) && node.element) {
+                    highlightConnections(name, false);
+                }
+            });
+        }
+
+        function clearSelection() {
+            selectedBalls.clear();
+            clearHighlights();
+        }
+
+        // Initialize
+        renderGraph();
+
+        // Click on background to deselect
+        document.getElementById('graphContainer').addEventListener('click', (e) => {
+            if (e.target.id === 'graphContainer' || e.target.id === 'connectionSvg') {
+                selectedBalls.clear();
+                clearHighlights();
+            }
+        });
+
+        // Redraw on resize
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                drawConnections();
+                // Re-apply selections if any exist
+                if (selectedBalls.size > 0) {
+                    clearHighlights();
+                    selectedBalls.forEach(ballName => {
+                        highlightConnections(ballName, true);
+                    });
+                }
+            }, 200);
+        });
+    </script>
+</body>
+</html>
