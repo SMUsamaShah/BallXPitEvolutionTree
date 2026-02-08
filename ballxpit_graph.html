@@ -279,14 +279,14 @@
         function getImageUrl(ballName) {
             // Special handling for Laser balls
             if (ballName === 'Laser (Horizontal)') {
-                return 'https://ballxpit.wiki.gg/images/thumb/Laser_%28Horizontal%29.png/100px-Laser_%28Horizontal%29.png';
+                return 'images/Laser_%28Horizontal%29.png';
             }
             if (ballName === 'Laser (Vertical)') {
-                return 'https://ballxpit.wiki.gg/images/thumb/Laser_%28Vertical%29.png/100px-Laser_%28Vertical%29.png';
+                return 'images/Laser_%28Vertical%29.png';
             }
-            
+
             const imageName = ballName.replace(/ /g, '_').replace(/\(|\)/g, '');
-            return `https://ballxpit.wiki.gg/images/thumb/${imageName}.png/100px-${imageName}.png`;
+            return `images/${imageName}.png`;
         }
 
         const ballsData = {
